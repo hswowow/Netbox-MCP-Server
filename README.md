@@ -71,6 +71,7 @@ uv run fastmcp run src/main.py
 
 The server will start and be available for MCP connections.
 
+
 ## 🔧 Available Tools
 
 ### Device Management
@@ -147,3 +148,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [pynetbox](https://github.com/netbox-community/pynetbox) - NetBox API client library
 - [NetBox](https://netbox.dev/) - The network documentation and IPAM platform
 - [uv](https://github.com/astral-sh/uv) - Fast Python package installer and resolver
+
+## 📞 Support
+
+If you encounter any issues or have questions:
+
+1. Check the [Issues](https://github.com/your-username/netbox-mcp/issues) section
+2. Create a new issue with detailed information
+3. Include relevant logs and configuration details
+
+---
+
+**Made with ❤️ for the NetBox and network automation community**
