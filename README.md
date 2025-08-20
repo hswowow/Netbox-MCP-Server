@@ -136,7 +136,7 @@ netbox-mcp/
 | `MCP_TRANSPORT` | MCP transport protocol | `streamable-http` |
 | `MCP_HOST` | Server host binding | `localhost` |
 | `MCP_PORT` | Server port | `8000` |
-| `NETBOX_RESOURCE_UPDATE_INTERVAL_HOURS` | Resource cache update interval (hours) | `24` |
+| `NETBOX_RESOURCE_UPDATE_INTERVAL_HOURS` | Resource cache update interval (hours) for recurring updates | `24` |
 
 ## 📄 License
 

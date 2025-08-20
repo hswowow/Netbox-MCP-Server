@@ -11,6 +11,8 @@ import logging
 import os
 from pathlib import Path
 from datetime import datetime, timedelta
+import threading
+import time
 
 load_dotenv(find_dotenv())
 
@@ -36,7 +38,7 @@ resources_server = None
 cached_tools_server = None
 
 def should_update_resources():
-    """Check if resources should be updated (once per day)"""
+    """Check if resources should be updated based on time interval"""
     timestamp_file = Path("resources/.last_update")
     
     if not timestamp_file.exists():
@@ -51,26 +53,26 @@ def should_update_resources():
         now = datetime.now()
         time_since_update = now - last_update
         
-        if time_since_update >= timedelta(days=1):
-            logger.info(f" [RESOURCES] Last update was {time_since_update.days} days ago, updating resources...")
+        # Get update interval from environment variable (default 24 hours)
+        update_interval_hours = int(os.getenv('NETBOX_RESOURCE_UPDATE_INTERVAL_HOURS', '24'))
+        
+        if time_since_update >= timedelta(hours=update_interval_hours):
+            logger.info(f" [RESOURCES] Last update was {time_since_update.total_seconds() / 3600:.1f} hours ago (interval: {update_interval_hours}h), updating resources...")
             return True
         else:
-            logger.info(f" [RESOURCES] Resources updated {time_since_update.days} days ago, skipping update...")
+            logger.info(f" [RESOURCES] Resources updated {time_since_update.total_seconds() / 3600:.1f} hours ago (interval: {update_interval_hours}h), skipping update...")
             return False
             
     except Exception as e:
         logger.warning(f" [RESOURCES] Error reading update timestamp: {e}, updating resources...")
         return True
 
-def update_resources_if_needed():
-    """Update resources only if needed (once per day)"""
-    if not should_update_resources():
-        return
-    
+def update_resources():
+    """Update resources from NetBox"""
     try:
         from resources.update_resources import NetBoxResourceUpdater
         
-        logger.info(" [RESOURCES] Starting daily resource update...")
+        logger.info(" [RESOURCES] Starting resource update...")
         updater = NetBoxResourceUpdater()
         results = updater.update_all_resources()
         
@@ -93,7 +95,40 @@ def update_resources_if_needed():
         logger.error(f" [RESOURCES] Failed to update resources: {e}")
         logger.warning(" [RESOURCES] Continuing with existing resource files...")
 
-update_resources_if_needed()
+def update_resources_at_startup():
+    """Update resources at the beginning of each MCP server launch"""
+    logger.info(" [RESOURCES] Starting resource update at server startup...")
+    update_resources()
+
+def background_resource_updater():
+    """Background thread for recurring resource updates"""
+    update_interval_hours = int(os.getenv('NETBOX_RESOURCE_UPDATE_INTERVAL_HOURS', '24'))
+    update_interval_seconds = update_interval_hours * 3600
+    
+    logger.info(f" [RESOURCES] Background updater started - checking every {update_interval_hours} hours")
+    
+    while True:
+        try:
+            time.sleep(update_interval_seconds)
+            
+            if should_update_resources():
+                logger.info(" [RESOURCES] Background updater: starting scheduled resource update...")
+                update_resources()
+            else:
+                logger.info(" [RESOURCES] Background updater: resources are up to date, skipping update...")
+                
+        except Exception as e:
+            logger.error(f" [RESOURCES] Background updater error: {e}")
+            # Continue running even if there's an error
+            time.sleep(60)  # Wait 1 minute before retrying
+
+# Start background updater thread
+background_thread = threading.Thread(target=background_resource_updater, daemon=True)
+background_thread.start()
+logger.info(" [RESOURCES] Background resource updater thread started")
+
+# Always update at startup
+update_resources_at_startup()
 
 try:
     from tools.devices import devices_server
