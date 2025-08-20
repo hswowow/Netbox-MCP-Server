@@ -148,29 +148,6 @@ fastmcp run src/main.py
 
 The server will start and be available for MCP connections.
 
-## 🛠️ Development
-
-### FastMCP Commands
-
-The project uses FastMCP for development and deployment:
-
-- **`fastmcp install`**: Install the MCP server for system-wide use
-- **`fastmcp run`**: Run the MCP server (development mode)
-- **`fastmcp dev`**: Run in development mode with auto-reload
-
-### Development Workflow
-
-```bash
-# Install dependencies and FastMCP
-uv sync
-uv run fastmcp install
-
-# Run in development mode (auto-reload on changes)
-uv run fastmcp dev
-
-# Or run in production mode
-uv run fastmcp run
-```
 
 ## 🔧 Available Tools
 
