@@ -119,15 +119,13 @@ def background_resource_updater():
                 
         except Exception as e:
             logger.error(f" [RESOURCES] Background updater error: {e}")
-            # Continue running even if there's an error
-            time.sleep(60)  # Wait 1 minute before retrying
+            time.sleep(60)
 
-# Start background updater thread
+
 background_thread = threading.Thread(target=background_resource_updater, daemon=True)
 background_thread.start()
 logger.info(" [RESOURCES] Background resource updater thread started")
 
-# Always update at startup
 update_resources_at_startup()
 
 try:
