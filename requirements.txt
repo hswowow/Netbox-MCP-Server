@@ -1,0 +1,37 @@
+# NetBox MCP Server Requirements
+# Python 3.10+ required
+
+# FastMCP framework for Model Context Protocol server implementation
+fastmcp>=2.0.0
+
+# PyNetBox - Official Python API client for NetBox
+pynetbox>=7.3.0
+
+# Environment variable management
+python-dotenv>=1.0.0
+
+# HTTP client library (dependency of pynetbox, but explicitly listed for version control)
+requests>=2.32.3,<3.0
+
+# URL parsing utilities (dependency of pynetbox)
+urllib3>=2.2.3,<3.0
+
+# Package utilities (dependency of pynetbox)
+packaging>=21.0
+
+# Optional: Enhanced logging and debugging
+# colorlog>=6.7.0
+
+# Optional: JSON schema validation for complex configurations
+# jsonschema>=4.17.0
+
+# Optional: YAML configuration file support
+# pyyaml>=6.0
+
+# Development dependencies (uncomment for development)
+# pytest>=7.0.0
+# pytest-asyncio>=0.21.0
+# black>=23.0.0
+# flake8>=6.0.0
+# mypy>=1.0.0
+# pre-commit>=3.0.0
