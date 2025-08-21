@@ -104,31 +104,44 @@ The server will start and be available for MCP connections.
 
 ### Device Management
 - **`get_devices`**: Retrieve devices with filtering options
-- **`get_device_by_name`**: Get specific device information
-- **`get_device_interfaces`**: List device interfaces
 
 ### Site Management  
 - **`get_sites`**: Retrieve all sites
-- **`get_site_devices`**: Get devices at a specific site
 
 ### IP Address Management
 - **`get_ip_addresses`**: Query IP addresses with filtering
-- **`get_available_ips`**: Find available IPs in a prefix
+- **`get_ip_prefixes`**: Query IP prefixes with filtering
+- **`get_ip_ranges`**: Query IP ranges with filtering
+- **`get_vrfs`**: Query VRFs (Virtual Routing and Forwarding)
+- **`get_vlans`**: Query VLANs with filtering
 
 ### Interface Management
 - **`get_interfaces`**: Query network interfaces
-- **`get_interface_connections`**: Get interface cable connections
+- **`get_interfaces_by_vlan`**: Filter interfaces by PVID (untagged VLAN) across all devices or a specific device
+- **`get_front_ports`**: Query front ports from patch panels and modular devices
+- **`get_rear_ports`**: Query rear ports from patch panels and modular devices
 
 ### Cable Tracing
 - **`get_cable`**: Get detailed cable information
 - **`trace_devices_connection`**: Bidirectional search between devices
 - **`trace_from_interface`**: Tree search from specific interface
 
-### Resource Access
-- **`get_device_types`**: Available device types
-- **`get_device_roles`**: Device role categories
-- **`get_manufacturers`**: Equipment manufacturers
-- **`get_sites_cached`**: Cached site information
+### Cached Resources & Tools
+- **`get_cached_resources`**: Access cached NetBox resources (sites, device types, roles, manufacturers)
+- **`get_resource_summary`**: Get summary of cached resources
+- **`get_available_prompts`**: Get available AI prompts for network analysis
+
+### AI Prompts
+- **`TraceNetworkPath`**: Comprehensive network path tracing between devices
+- **`DeviceInterfaces`**: Device interface analysis and connectivity assessment
+- **`SiteNetworkInfrastructure`**: Site-based network infrastructure analysis
+- **`PatchPanelAnalysis`**: Patch panel and cable management analysis
+
+### Static Resources
+- **`netbox://sites`**: Cached site information
+- **`netbox://device-types`**: Cached device type information
+- **`netbox://device-roles`**: Cached device role information
+- **`netbox://manufacturers`**: Cached manufacturer information
 
 
 ## 📁 Project Structure

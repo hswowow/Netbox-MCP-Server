@@ -45,9 +45,9 @@ def get_interfaces(
         enabled: Optional[bool] = None,
         cabled: Optional[bool] = None,
         connected: Optional[bool] = None,
+        mode: Optional[str] = None,
         mgmt_only: Optional[bool] = None,
         lag: Optional[str] = None,
-        mode: Optional[str] = None,
         limit: Optional[int] = 100
     ) -> Dict[str, Any]:
         """
@@ -98,12 +98,12 @@ def get_interfaces(
                 interface_filters['cabled'] = cabled
             if connected is not None:
                 interface_filters['connected'] = connected
+            if mode:
+                interface_filters['mode'] = mode
             if mgmt_only is not None:
                 interface_filters['mgmt_only'] = mgmt_only
             if lag:
                 interface_filters['lag'] = lag
-            if mode:
-                interface_filters['mode'] = mode
             
             logger.info(f" [TOOLS] Querying interfaces with filters: {interface_filters}")
             interfaces = list(nb.dcim.interfaces.filter(**interface_filters))
@@ -208,6 +208,135 @@ def get_interfaces(
             logger.error(f" [TOOLS] Error in get_interfaces: {e}")
             return {
                 "error": f"Failed to retrieve interfaces: {str(e)}",
+                "interfaces": [],
+                "metadata": {"total_count": 0}
+            }
+
+@interfaces_server.tool(
+        name="get_interfaces_by_vlan",
+        description="Filter interfaces by PVID (untagged VLAN) across all devices or a specific device. This tool is useful for finding all interfaces that are configured with a particular VLAN as their untagged VLAN. When device is specified, returns interfaces only from that device. When device is not specified, returns interfaces from all devices. Use this tool to analyze VLAN configurations across your network infrastructure. IMPORTANT: Use cached resources to find correct device names before calling this tool. For fuzzy matching, first search cached devices to find exact device names from user-provided aliases."
+    )
+def get_interfaces_by_vlan(
+        pvid: int,
+        device: Optional[str] = None,
+        limit: Optional[int] = 100
+    ) -> Dict[str, Any]:
+        """
+        Get interfaces filtered by PVID (untagged VLAN) and optionally by device.
+        
+        Args:
+            pvid: PVID (untagged VLAN ID) to filter by (required)
+            device: Device name or slug to filter by (optional - if not specified, searches all devices)
+            limit: Maximum number of interfaces to return (default: 100, max: 1000)
+        
+        Returns:
+            Dictionary containing interfaces with the specified PVID and metadata
+        """
+        if not nb:
+            logger.error(f" [CONNECTION] NetBox connection not available. Check NETBOX_URL and NETBOX_API_TOKEN environment variables.")
+            return {
+                "error": "NetBox connection not available. Check NETBOX_URL and NETBOX_API_TOKEN environment variables."
+            }
+        
+        try:
+            if limit is not None and (limit < 1 or limit > 1000):
+                return {"error": "Limit must be between 1 and 1000"}
+            
+            if not pvid or pvid < 1 or pvid > 4094:
+                return {"error": "PVID must be a valid VLAN ID between 1 and 4094"}
+            
+            if device:
+                logger.info(f" [TOOLS] Querying interfaces for device '{device}' with PVID {pvid}")
+                device_interfaces = list(nb.dcim.interfaces.filter(device=device))
+            else:
+                logger.info(f" [TOOLS] Querying interfaces for all devices with PVID {pvid}")
+                device_interfaces = list(nb.dcim.interfaces.all())
+            
+            if limit:
+                device_interfaces = device_interfaces[:limit]
+            
+            result_interfaces = []
+            for interface in device_interfaces:
+                try:
+                    if interface.untagged_vlan and interface.untagged_vlan.vid == pvid:
+                        connected = interface.cable is not None
+                        
+                        untagged_vlan = {
+                            'id': interface.untagged_vlan.id,
+                            'name': interface.untagged_vlan.name,
+                            'vid': interface.untagged_vlan.vid
+                        }
+                        
+                        tagged_vlans = []
+                        if interface.tagged_vlans:
+                            for vlan in interface.tagged_vlans:
+                                tagged_vlans.append({
+                                    'id': vlan.id,
+                                    'name': vlan.name,
+                                    'vid': vlan.vid
+                                })
+                        
+                        status = "enabled" if interface.enabled else "disabled"
+                        if interface.enabled and connected:
+                            status = "connected"
+                        elif interface.enabled and not connected:
+                            status = "enabled"
+                        else:
+                            status = "disabled"
+                        
+                        vlan_info = f"untagged:{untagged_vlan['vid']}"
+                        if tagged_vlans:
+                            vlan_ids = [str(vlan['vid']) for vlan in tagged_vlans]
+                            vlan_info += f",tagged:{','.join(vlan_ids)}"
+                        
+                        interface_info = {
+                            'id': interface.id,
+                            'name': interface.name,
+                            'device_name': interface.device.name if interface.device else None,
+                            'type': interface.type.value if interface.type else None,
+                            'status': status,
+                            'kind': interface.kind.value if hasattr(interface, 'kind') and interface.kind else None,
+                            'vlan': vlan_info,
+                            'pvid': pvid,
+                            'untagged_vlan': untagged_vlan,
+                            'tagged_vlans': tagged_vlans
+                        }
+                        result_interfaces.append(interface_info)
+                    
+                except Exception as e:
+                    logger.warning(f" [TOOLS] Error processing interface {getattr(interface, 'name', 'unknown')}: {e}")
+                    continue
+            
+            connection_summary = {
+                'total': len(result_interfaces),
+                'connected': len([i for i in result_interfaces if i.get('status') == 'connected']),
+                'enabled': len([i for i in result_interfaces if i.get('status') in ['enabled', 'connected']])
+            }
+            
+            response = {
+                'interfaces': result_interfaces,
+                'summary': connection_summary,
+                'metadata': {
+                    'total_count': len(result_interfaces),
+                    'filters_applied': {
+                        'device': device,
+                        'pvid': pvid
+                    },
+                    'limit': limit,
+                    'truncated': len(device_interfaces) == limit if limit else False
+                }
+            }
+            
+            if device:
+                logger.info(f" [TOOLS] Returning {len(result_interfaces)} interfaces with PVID {pvid} for device '{device}'")
+            else:
+                logger.info(f" [TOOLS] Returning {len(result_interfaces)} interfaces with PVID {pvid} from all devices")
+            return response
+            
+        except Exception as e:
+            logger.error(f" [TOOLS] Error in get_interfaces_by_vlan: {e}")
+            return {
+                "error": f"Failed to retrieve interfaces by VLAN: {str(e)}",
                 "interfaces": [],
                 "metadata": {"total_count": 0}
             }
