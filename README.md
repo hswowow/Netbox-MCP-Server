@@ -54,9 +54,37 @@ NETBOX_RESOURCE_UPDATE_INTERVAL_HOURS=24
 
 ### 4. Run the Server
 
-#### Installing in MCP client
+#### Installing in Claude-Desktop/Cursor (STDIO)
 ```bash
-uv run fastmcp install <mcp-client> src/main.py 
+"netbox-mcp": {
+      "command": "/path/to/uv",
+      "args": [
+        "run",
+        "--directory", "/path/to/Netbox-MCP-Server",
+        "--with",
+        "fastmcp",
+        "fastmcp",
+        "run",
+        "/path/to/src/main.py"
+      ],
+      "env": {
+        "NETBOX_URL": "https://your-netbox.com/",
+        "NETBOX_TOKEN": "API_TOKEN",
+        "NETBOX_RESOURCE_UPDATE_INTERVAL_HOURS": "24"
+      },
+      "transport": "stdio",
+      "type": null,
+      "cwd": null,
+      "timeout": null,
+      "description": null,
+      "icon": null,
+      "authentication": null,
+      "capabilities": {
+        "prompts": {
+          "listChanged": true
+        }
+      }
+    }
 ```
 
 #### Dev
