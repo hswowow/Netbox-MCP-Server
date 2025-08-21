@@ -34,7 +34,7 @@ interfaces_server = FastMCP(
     
 @interfaces_server.tool(
         name="get_interfaces",
-        description="Retrieve interfaces from NetBox with comprehensive filtering capabilities. This tool allows you to query device interfaces by device name, interface type, connection status, and various other parameters. Use this tool to analyze network connectivity, troubleshoot interface issues, and map device connections. IMPORTANT: Use cached resources to find correct device names before calling this tool. For fuzzy matching, first search cached devices to find exact device names from user-provided aliases."
+        description="Retrieve interfaces from NetBox with minimal token usage. Returns essential interface information: id, name, device_name, type, status, kind, and VLAN assignments. Use this tool to quickly analyze network interfaces and verify VLAN configurations. IMPORTANT: Use cached resources to find correct device names before calling this tool. For fuzzy matching, first search cached devices to find exact device names from user-provided aliases."
     )
 def get_interfaces(
         device: Optional[str] = None,
@@ -68,7 +68,7 @@ def get_interfaces(
             limit: Maximum number of interfaces to return (default: 100, max: 1000)
         
         Returns:
-            Dictionary containing interface information and metadata
+            Dictionary containing minimal interface information (id, name, device_name, type, status, kind, vlan) and metadata
         """
         if not nb:
             logger.error(f" [CONNECTION] NetBox connection not available. Check NETBOX_URL and NETBOX_API_TOKEN environment variables.")
@@ -115,13 +115,48 @@ def get_interfaces(
             for interface in interfaces:
                 try:
                     connected = interface.cable is not None
+                
+                    untagged_vlan = None
+                    tagged_vlans = []
+                    
+                    if interface.untagged_vlan:
+                        untagged_vlan = {
+                            'id': interface.untagged_vlan.id,
+                            'name': interface.untagged_vlan.name,
+                            'vid': interface.untagged_vlan.vid
+                        }
+                    
+                    if interface.tagged_vlans:
+                        for vlan in interface.tagged_vlans:
+                            tagged_vlans.append({
+                                'id': vlan.id,
+                                'name': vlan.name,
+                                'vid': vlan.vid
+                            })
+                    
+                    status = "enabled" if interface.enabled else "disabled"
+                    if interface.enabled and connected:
+                        status = "connected"
+                    elif interface.enabled and not connected:
+                        status = "enabled"
+                    else:
+                        status = "disabled"
+                    
+                    vlan_info = None
+                    if untagged_vlan:
+                        vlan_info = f"untagged:{untagged_vlan['vid']}"
+                    elif tagged_vlans:
+                        vlan_ids = [str(vlan['vid']) for vlan in tagged_vlans]
+                        vlan_info = f"tagged:{','.join(vlan_ids)}"
                     
                     interface_info = {
                         'id': interface.id,
-                        'connected': connected,
+                        'name': interface.name,
                         'device_name': interface.device.name if interface.device else None,
                         'type': interface.type.value if interface.type else None,
-                        'kind': interface.kind.value if hasattr(interface, 'kind') and interface.kind else None
+                        'status': status,
+                        'kind': interface.kind.value if hasattr(interface, 'kind') and interface.kind else None,
+                        'vlan': vlan_info
                     }
                     result_interfaces.append(interface_info)
                     
@@ -130,9 +165,11 @@ def get_interfaces(
                     result_interfaces.append({
                         'id': getattr(interface, 'id', None),
                         'name': getattr(interface, 'name', 'unknown'),
-                        'device': {
-                            'name': getattr(interface.device, 'name', None) if hasattr(interface, 'device') and interface.device else None
-                        },
+                        'device_name': getattr(interface.device, 'name', None) if hasattr(interface, 'device') and interface.device else None,
+                        'type': None,
+                        'status': 'error',
+                        'kind': None,
+                        'vlan': None,
                         'error': f"Error processing interface: {str(e)}"
                     })
             
